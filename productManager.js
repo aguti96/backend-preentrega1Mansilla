@@ -1,28 +1,14 @@
-class Producto {
-    constructor(nombre, descripcion, precio, imagen, codigo, stock) {
-        this.nombre = nombre;
-        this.descripcion = descripcion;
-        this.precio = precio;
-        this.imagen = imagen;
-        this.codigo = codigo;
-        this.stock = stock;
-        this.id = Producto.obtenerSiguienteId();
-    }
+const fs = require('fs');
 
-    static obtenerSiguienteId() {
-        if (!this._siguienteId) {
-            this._siguienteId = 1;
-        } else {
-            this._siguienteId++;
-        }
-        return this._siguienteId;
-    }
-}
-
-// ESTO SERÍA UNA CLASE PARA GESTIONAR LOS PRODUCTOS
 class GestorProductos {
-    constructor() {
-        this.productos = [];
+    constructor(filePath) {
+        this.path = filePath;
+        this.productos = this.getProductsFromFile();
+        this._siguienteId = 1;
+    }
+
+    obtenerSiguienteId() {
+        return this._siguienteId++;
     }
 
     agregarProducto(producto) {
@@ -37,7 +23,9 @@ class GestorProductos {
             return;
         }
 
+        producto.id = this.obtenerSiguienteId();
         this.productos.push(producto);
+        this.saveProductsToFile();
     }
 
     obtenerProductos() {
@@ -52,20 +40,34 @@ class GestorProductos {
             console.log("No se encontró el producto.");
         }
     }
+
+    actualizarProducto(id, nuevosDatos) {
+        const index = this.productos.findIndex(producto => producto.id === id);
+        if (index !== -1) {
+            this.productos[index] = { ...this.productos[index], ...nuevosDatos };
+            this.saveProductsToFile();
+            return this.productos[index];
+        }
+        return null;
+    }
+
+    eliminarProducto(id) {
+        this.productos = this.productos.filter(producto => producto.id !== id);
+        this.saveProductsToFile();
+    }
+
+    getProductsFromFile() {
+        try {
+            const data = fs.readFileSync(this.path, 'utf-8');
+            return JSON.parse(data);
+        } catch (error) {
+            return [];
+        }
+    }
+
+    saveProductsToFile() {
+        fs.writeFileSync(this.path, JSON.stringify(this.productos, null, 2));
+    }
 }
 
-// Esto sería un ejemplo de como utilizarlo
-const gestorProductos = new GestorProductos();
-
-const producto1 = new Producto("Producto 1", "Descripción 1", 10.99, "imagen1.jpg", "CODIGO1", 100);
-const producto2 = new Producto("Producto 2", "Descripción 2", 19.99, "imagen2.jpg", "CODIGO2", 50);
-
-gestorProductos.agregarProducto(producto1);
-gestorProductos.agregarProducto(producto2);
-
-console.log(gestorProductos.obtenerProductos());
-
-const productoEncontrado = gestorProductos.obtenerProductoPorId(1); // Cambia el ID según el producto que quieras buscar
-if (productoEncontrado) {
-    console.log(productoEncontrado);
-}
+module.exports = GestorProductos;
