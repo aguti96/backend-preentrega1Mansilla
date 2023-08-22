@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-class GestorProductos {
+class ProductManager {
     constructor(filePath) {
         this.path = filePath;
         this.productos = this.getProductsFromFile();
@@ -70,4 +70,4 @@ class GestorProductos {
     }
 }
 
-module.exports = GestorProductos;
+module.exports = ProductManager;
