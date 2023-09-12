@@ -1,11 +1,24 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const ProductManager = require('./ProductManager');
+const ProductManager = require('./productManager'); 
+
 const CartManager = require('./CartManager');
+const http = require('http');
+const socketIo = require('socket.io');
+const exphbs = require('express-handlebars');
+
 const app = express();
-const PORT = process.env.PORT || 8080;
+const server = http.createServer(app);
+const io = socketIo(server);
+
+
+app.engine('.hbs', exphbs({ extname: '.hbs' }));
+app.set('view engine', '.hbs');
+
 
 app.use(bodyParser.json());
+
+const PORT = process.env.PORT || 8080;
 
 const gestorProductos = new ProductManager('./data/productos.json');
 const gestorCarritos = new CartManager('./data/carrito.json');
@@ -91,6 +104,9 @@ app.post('/api/carts/:cid/product/:pid', async (req, res) => {
 
         await gestorCarritos.actualizarCarrito(cid, carrito);
 
+        
+        io.emit('updateCart', { cartId: cid });
+
         res.json({ message: 'Producto agregado al carrito.' });
     } catch (error) {
         console.error(error);
@@ -98,6 +114,27 @@ app.post('/api/carts/:cid/product/:pid', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+//realTimeProducts
+app.get('/realtimeproducts', async (req, res) => {
+    try {
+        const productos = await gestorProductos.obtenerProductos();
+        res.render('realTimeProducts', { productos });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener los productos.' });
+    }
+});
+
+// Configuración de WebSocket
+io.on('connection', (socket) => {
+    console.log('Cliente WebSocket conectado');
+    
+    
+    socket.on('disconnect', () => {
+        console.log('Cliente WebSocket desconectado');
+    });
+});
+
+server.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
