@@ -1,61 +1,60 @@
-const fs = require('fs');
+const { Cart } = require('./models');
 
 class CartManager {
-    constructor(filePath) {
-        this.path = filePath;
-        this.carts = this.getCartsFromFile();
-        this._nextCartId = 1;
-    }
+    
 
-    getNextCartId() {
-        return this._nextCartId++;
-    }
-
-    createCart() {
-        const cart = {
-            id: this.getNextCartId(),
-            products: []
-        };
-
-        this.carts.push(cart);
-        this.saveCartsToFile();
-        return cart;
-    }
-
-    getCartById(cartId) {
-        return this.carts.find(cart => cart.id === cartId);
-    }
-
-    addProductToCart(cartId, productId, quantity = 1) {
-        const cart = this.getCartById(cartId);
-        if (cart) {
-            const existingProduct = cart.products.find(product => product.id === productId);
-            if (existingProduct) {
-                existingProduct.quantity += quantity;
-            } else {
-                cart.products.push({ id: productId, quantity });
-            }
-            this.saveCartsToFile();
-            return cart;
-        }
-        return null;
-    }
-
-    getCarts() {
-        return this.carts;
-    }
-
-    getCartsFromFile() {
+    async createCart() {
         try {
-            const data = fs.readFileSync(this.path, 'utf-8');
-            return JSON.parse(data);
+            const nuevoCarrito = new Cart({
+                products: []
+            });
+            await nuevoCarrito.save();
+            return nuevoCarrito;
         } catch (error) {
-            return [];
+            throw new Error('Error al crear el carrito.');
         }
     }
 
-    saveCartsToFile() {
-        fs.writeFileSync(this.path, JSON.stringify(this.carts, null, 2));
+    async getCartById(cartId) {
+        try {
+            const carrito = await Cart.findById(cartId).populate('products.product');
+            if (carrito) {
+                return carrito;
+            } else {
+                throw new Error('Carrito no encontrado.');
+            }
+        } catch (error) {
+            throw new Error('Error al obtener el carrito.');
+        }
+    }
+
+    async addProductToCart(cartId, productId, quantity = 1) {
+        try {
+            const carrito = await Cart.findById(cartId);
+            if (carrito) {
+                const existingProduct = carrito.products.find(product => product.product.toString() === productId);
+                if (existingProduct) {
+                    existingProduct.quantity += quantity;
+                } else {
+                    carrito.products.push({ product: productId, quantity });
+                }
+                await carrito.save();
+                return carrito;
+            } else {
+                throw new Error('Carrito no encontrado.');
+            }
+        } catch (error) {
+            throw new Error('Error al agregar producto al carrito.');
+        }
+    }
+
+    async getCarts() {
+        try {
+            const carritos = await Cart.find().populate('products.product');
+            return carritos;
+        } catch (error) {
+            throw new Error('Error al obtener los carritos.');
+        }
     }
 }
 
