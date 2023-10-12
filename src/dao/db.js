@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 
-const DB_URL = "mongodb+srv://mansillaagustin6:<Supernova2576>@cluster0.cxzkttl.mongodb.net/?retryWrites=true&w=majority&appName=AtlasApp";
+const DB_URL = "mongodb+srv://mansillaagustin6:Supernova2576@cluster0.cxzkttl.mongodb.net/?retryWrites=true&w=majority&appName=AtlasApp";
 
 
 const connectDB = async () => {
