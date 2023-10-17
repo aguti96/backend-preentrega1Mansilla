@@ -1,4 +1,4 @@
-const { Product, Cart, Message } = require('../models');
+const { Product, Cart, Message, User } = require('../models');
 
 const productController = {
   getAllProducts: async (req, res) => {
@@ -116,8 +116,6 @@ const cartController = {
       res.status(500).json({ error: 'Error al agregar el producto al carrito.' });
     }
   },
-
-  
 };
 
 const messageController = {
@@ -142,4 +140,66 @@ const messageController = {
   },
 };
 
-module.exports = { productController, cartController, messageController };
+const bcrypt = require('bcryptjs');
+
+const userController = {
+  loginUser: async (req, res) => {
+    const { email, password } = req.body;
+    try {
+      const user = await User.findOne({ email });
+      if (user && bcrypt.compareSync(password, user.password)) {
+        // Usuario autenticado, crear sesión y redirigir a la vista de productos
+        req.session.user = {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+        };
+        res.redirect('/products'); // Redirigir a la vista de productos
+      } else {
+        // Credenciales inválidas, redirigir al formulario de login con un mensaje de error
+        res.render('login', { error: 'Credenciales inválidas. Inténtalo de nuevo.' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Error al procesar el login.' });
+    }
+  },
+
+  showRegisterForm: (req, res) => {
+    // Renderizar el formulario de registro
+    res.render('register');
+  },
+
+  registerUser: async (req, res) => {
+    const { email, password } = req.body;
+    try {
+      // Verificar si el usuario ya existe en la base de datos
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        // El usuario ya existe, redirigir al formulario de registro con un mensaje de error
+        res.render('register', { error: 'El correo electrónico ya está registrado. Por favor, utiliza otro correo.' });
+      } else {
+        // El usuario no existe, registrar el nuevo usuario en la base de datos
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        const newUser = new User({ email, password: hashedPassword, role: 'usuario' });
+        await newUser.save();
+        // Usuario registrado con éxito, redirigir al login con un mensaje de éxito
+        res.render('login', { success: 'Usuario registrado con éxito. Ahora puedes iniciar sesión.' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Error al registrar el usuario.' });
+    }
+  },
+
+  logoutUser: (req, res) => {
+    // Destruir la sesión y redirigir al login
+    req.session.destroy((err) => {
+      if (err) {
+        res.status(500).json({ error: 'Error al cerrar sesión.' });
+      } else {
+        res.redirect('/login'); // Redirigir al formulario de login
+      }
+    });
+  },
+};
+
+module.exports = { productController, cartController, messageController, userController };
